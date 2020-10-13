@@ -1,5 +1,7 @@
 import { getRepository } from 'typeorm';
 import { compare } from 'bcryptjs';
+import { sign } from 'jsonwebtoken';
+import authConfig from '../config/auth';
 
 import { User } from '../models/User';
 
@@ -9,7 +11,10 @@ interface IRequest {
 }
 
 export class AuthenticateUserService {
-  public async execute({ email, password }: IRequest): Promise<{ user: User }> {
+  public async execute({
+    email,
+    password,
+  }: IRequest): Promise<{ user: User; token: string }> {
     const usersRepository = getRepository(User);
 
     const user = await usersRepository.findOne({ where: { email } });
@@ -24,6 +29,10 @@ export class AuthenticateUserService {
       throw new Error('invalid credentials');
     }
 
-    return { user };
+    const { expiresIn, secret } = authConfig.jwt;
+
+    const token = sign({}, secret, { subject: user.id, expiresIn });
+
+    return { user, token };
   }
 }
